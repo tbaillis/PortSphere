@@ -13,6 +13,7 @@ C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\PortS
 C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\PortSphere3D.AssemblyInfoInputs.cache
 C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\PortSphere3D.AssemblyInfo.cs
 C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\PortSphere3D.csproj.CoreCompileInputs.cache
+C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\PortSphere3D.sourcelink.json
 C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\PortSphere3D.dll
 C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\refint\PortSphere3D.dll
 C:\Users\Tim\source\repos\PortSphere\PortSphere3D\obj\Debug\net8.0-windows\PortSphere3D.pdb

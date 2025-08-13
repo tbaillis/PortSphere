@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PortSphere3D")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9a87868f220379538086dd07da0faa498a918da5")]
 [assembly: System.Reflection.AssemblyProductAttribute("PortSphere3D")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PortSphere3D")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
