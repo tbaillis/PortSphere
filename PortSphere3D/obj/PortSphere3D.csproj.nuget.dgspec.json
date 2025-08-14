@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj": {}
+    "c:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj": {
+    "c:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj",
+        "projectUniqueName": "c:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj",
         "projectName": "PortSphere3D",
-        "projectPath": "C:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj",
+        "projectPath": "c:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\PortSphere3D.csproj",
         "packagesPath": "C:\\Users\\Tim\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\obj\\",
+        "outputPath": "c:\\Users\\Tim\\source\\repos\\PortSphere\\PortSphere3D\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
