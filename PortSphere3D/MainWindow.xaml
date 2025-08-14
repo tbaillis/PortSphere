@@ -11,15 +11,36 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <StackPanel Orientation="Horizontal" Margin="10" Grid.Row="0" VerticalAlignment="Center">
+        <WrapPanel Margin="10" Grid.Row="0" VerticalAlignment="Top">
             <TextBlock Text="Texture:" VerticalAlignment="Center" Margin="0,0,5,0"/>
             <ComboBox x:Name="TextureComboBox" Width="180" SelectionChanged="TextureComboBox_SelectionChanged">
                 <ComboBoxItem Content="Grid" IsSelected="True"/>
                 <ComboBoxItem Content="Octagon Grid"/>
+                <ComboBoxItem Content="Stars"/>
             </ComboBox>
             <TextBlock Text="  Sphere Size:" VerticalAlignment="Center" Margin="20,0,5,0"/>
             <Slider x:Name="SphereSizeSlider" Width="200" Minimum="1" Maximum="6" Value="2.1" TickFrequency="0.1" IsSnapToTickEnabled="True" ValueChanged="SphereSizeSlider_ValueChanged"/>
-        </StackPanel>
+            <TextBlock Text="  Spin Speed:" VerticalAlignment="Center" Margin="20,0,5,0"/>
+            <Slider x:Name="SpinSpeedSlider" Width="160" Minimum="0" Maximum="2" Value="0.3" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="SpinSpeedSlider_ValueChanged"/>
+            <TextBlock Text="  Sphere Color:" VerticalAlignment="Center" Margin="20,0,5,0"/>
+            <ComboBox x:Name="SphereColorComboBox" Width="140" SelectionChanged="SphereColorComboBox_SelectionChanged">
+                <ComboBoxItem Content="Green" IsSelected="True"/>
+                <ComboBoxItem Content="Blue"/>
+                <ComboBoxItem Content="Red"/>
+                <ComboBoxItem Content="Purple"/>
+                <ComboBoxItem Content="Gray"/>
+                <ComboBoxItem Content="White"/>
+            </ComboBox>
+            <TextBlock Text="  Direction:" VerticalAlignment="Center" Margin="20,0,5,0"/>
+            <Grid x:Name="SpinDial" Width="64" Height="64" MouseLeftButtonDown="SpinDial_MouseLeftButtonDown" MouseMove="SpinDial_MouseMove" MouseLeftButtonUp="SpinDial_MouseLeftButtonUp" ToolTip="Drag to set spin direction">
+                <Ellipse Width="64" Height="64" Fill="#222" Stroke="#555" StrokeThickness="2"/>
+                <Polygon x:Name="SpinDialPointer" Points="32,10 26,24 38,24" Fill="#ddd" RenderTransformOrigin="0.5,0.5">
+                    <Polygon.RenderTransform>
+                        <RotateTransform Angle="0"/>
+                    </Polygon.RenderTransform>
+                </Polygon>
+            </Grid>
+        </WrapPanel>
         <Grid Grid.Row="1">
             <Viewport3D x:Name="MainViewport" ClipToBounds="True"/>
             <Canvas x:Name="LightHandlesCanvas" Background="Transparent" IsHitTestVisible="True"/>

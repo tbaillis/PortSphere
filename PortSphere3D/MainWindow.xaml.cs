@@ -31,6 +31,8 @@ namespace PortSphere3D
         private DiffuseMaterial _sphereMaterial = null!;
         private DrawingBrush _gridBrush = null!;
         private DrawingBrush _octagonBrush = null!;
+    private DrawingBrush _starsBrush = null!;
+    private DrawingBrush _baseTextureBrush = null!;
         private PointLight _fixedLight = null!;
         private PointLight _draggableLight1 = null!;
         private PointLight _draggableLight2 = null!;
@@ -50,6 +52,13 @@ namespace PortSphere3D
     private ScaleTransform3D _scale = null!;
     private Transform3DGroup _sphereTransforms = null!;
         private double _sphereRadius = 2.1;
+    private double _spinSpeedBase = 0.3; // degrees per frame (magnitude)
+    private Vector2D _spinDirVec = new Vector2D(1, 0); // unit vector in XY plane; X=horizontal, Y=vertical
+    private bool _dialDragging = false;
+    private TextBlock _label1 = null!;
+    private TextBlock _label2 = null!;
+    private TextBlock _label3 = null!;
+    private TextBlock _label4 = null!;
         private bool _dragging1, _dragging2, _dragging3, _dragging4;
         private Point _lastMousePos;
         private Thread? _httpThread;
@@ -82,7 +91,13 @@ namespace PortSphere3D
             if (_sphereMaterial == null) return;
             var item = (TextureComboBox?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Grid";
             _currentTextureName = item;
-            _sphereMaterial.Brush = item.Contains("Octagon", StringComparison.OrdinalIgnoreCase) ? _octagonBrush : _gridBrush;
+            if (item.Contains("Octagon", StringComparison.OrdinalIgnoreCase))
+                _baseTextureBrush = _octagonBrush;
+            else if (item.Contains("Stars", StringComparison.OrdinalIgnoreCase))
+                _baseTextureBrush = _starsBrush;
+            else
+                _baseTextureBrush = _gridBrush;
+            ApplyTintAndSetMaterial();
         }
 
         private void SphereSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -123,6 +138,35 @@ namespace PortSphere3D
                 dg2.Children.Add(new GeometryDrawing(null, pen2, new LineGeometry(new Point(-50, t + 50), new Point(150, t + 50))));
             }
             _octagonBrush = new DrawingBrush(dg2) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 0.25, 0.25), ViewportUnits = BrushMappingMode.RelativeToBoundingBox, Viewbox = new Rect(0, 0, 100, 100), ViewboxUnits = BrushMappingMode.Absolute };
+
+            // Stars brush: dark sky background with small star ellipses
+            var dg3 = new DrawingGroup();
+            dg3.Children.Add(new GeometryDrawing(new SolidColorBrush(Color.FromRgb(5, 8, 16)), null, new RectangleGeometry(new Rect(0, 0, 100, 100))));
+            // Deterministic star positions (x, y, radius, opacity)
+            var stars = new (double x, double y, double r, double a)[]
+            {
+                (10, 12, 1.2, 0.9), (25, 8, 0.9, 0.8), (42, 16, 1.1, 0.85), (60, 10, 0.8, 0.8), (78, 14, 1.3, 0.95),
+                (15, 32, 0.7, 0.7), (33, 28, 0.9, 0.8), (50, 34, 1.0, 0.9), (68, 30, 0.8, 0.75), (88, 26, 0.7, 0.7),
+                (6, 54, 1.0, 0.9), (24, 48, 0.8, 0.8), (40, 52, 0.9, 0.85), (58, 46, 1.1, 0.9), (76, 50, 0.8, 0.75),
+                (12, 76, 0.8, 0.8), (28, 70, 1.2, 0.9), (46, 72, 0.9, 0.85), (64, 78, 0.7, 0.75), (84, 74, 1.1, 0.92),
+                (20, 92, 0.9, 0.85), (38, 88, 0.8, 0.8), (56, 94, 1.3, 0.95), (72, 86, 0.9, 0.85), (90, 90, 0.8, 0.8)
+            };
+            foreach (var s in stars)
+            {
+                var starFill = new SolidColorBrush(Color.FromArgb((byte)(s.a * 255), 255, 255, 255));
+                dg3.Children.Add(new GeometryDrawing(starFill, null, new EllipseGeometry(new Point(s.x, s.y), s.r, s.r)));
+            }
+            _starsBrush = new DrawingBrush(dg3)
+            {
+                TileMode = TileMode.Tile,
+                Viewport = new Rect(0, 0, 0.3, 0.3),
+                ViewportUnits = BrushMappingMode.RelativeToBoundingBox,
+                Viewbox = new Rect(0, 0, 100, 100),
+                ViewboxUnits = BrushMappingMode.Absolute
+            };
+
+            // Default base brush
+            _baseTextureBrush = _gridBrush;
         }
 
         private void Setup3DScene()
@@ -140,7 +184,7 @@ namespace PortSphere3D
             this.MainViewport!.Camera = cam;
 
             // Sphere material
-            _sphereMaterial = new DiffuseMaterial(_gridBrush);
+            _sphereMaterial = new DiffuseMaterial(_baseTextureBrush ?? _gridBrush);
             var spec = new SpecularMaterial(new SolidColorBrush(Color.FromRgb(255,255,255)), 80);
             var mg = new MaterialGroup();
             mg.Children.Add(_sphereMaterial);
@@ -180,10 +224,10 @@ namespace PortSphere3D
             _sceneGroup.Children.Add(_fixedLight);
 
             // Draggable lights
-            _draggableLight1 = new PointLight(Colors.Red, new Point3D(-4.5, 0, 3.5)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
-            _draggableLight2 = new PointLight(Colors.Lime, new Point3D(4.5, 0, 3.5)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
-            _draggableLight3 = new PointLight(Colors.DeepSkyBlue, new Point3D(0, 4.5, 3.5)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
-            _draggableLight4 = new PointLight(Colors.Gold, new Point3D(0, -4.5, 3.5)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
+            _draggableLight1 = new PointLight(Colors.Red, new Point3D(-4.5, 0, -1.0)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
+            _draggableLight2 = new PointLight(Colors.Lime, new Point3D(4.5, 0, -1.0)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
+            _draggableLight3 = new PointLight(Colors.DeepSkyBlue, new Point3D(0, 4.5, -1.0)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
+            _draggableLight4 = new PointLight(Colors.Gold, new Point3D(0, -4.5, -1.0)) { Range = 120, ConstantAttenuation = 0.9, LinearAttenuation = 0.03 };
             _sceneGroup.Children.Add(_draggableLight1);
             _sceneGroup.Children.Add(_draggableLight2);
             _sceneGroup.Children.Add(_draggableLight3);
@@ -192,19 +236,23 @@ namespace PortSphere3D
 
         private void SetupHandles()
         {
-            _handle1 = MakeHandle(Colors.Red);
-            _handle2 = MakeHandle(Colors.Lime);
-            _handle3 = MakeHandle(Colors.DeepSkyBlue);
-            _handle4 = MakeHandle(Colors.Gold);
+            _handle1 = MakeHandle(Colors.White);
+            _handle2 = MakeHandle(Colors.White);
+            _handle3 = MakeHandle(Colors.LightYellow);
+            _handle4 = MakeHandle(Colors.LightYellow);
             _zText1 = MakeZText();
             _zText2 = MakeZText();
             _zText3 = MakeZText();
             _zText4 = MakeZText();
-            if (_zInstruction == null)
+            _label1 = MakeGreekLabel("α");
+            _label2 = MakeGreekLabel("β");
+            _label3 = MakeGreekLabel("γ");
+            _label4 = MakeGreekLabel("δ");
+        if (_zInstruction == null)
             {
                 _zInstruction = new TextBlock
                 {
-                    Text = "Tip: Use mouse wheel over a handle to adjust Z (depth)",
+            Text = "Tip: Use mouse wheel over a handle to adjust Z (depth). Right-click a handle to change its color.",
                     Foreground = Brushes.White,
                     FontWeight = FontWeights.Bold,
                     FontSize = 16,
@@ -220,13 +268,78 @@ namespace PortSphere3D
             Canvas.SetZIndex(_zInstruction, 1000);
             this.LightHandlesCanvas.Children.Add(_handle1);
             this.LightHandlesCanvas.Children.Add(_zText1);
+            this.LightHandlesCanvas.Children.Add(_label1);
+            AddLightControlForHandle(_handle1, 1);
             this.LightHandlesCanvas.Children.Add(_handle2);
             this.LightHandlesCanvas.Children.Add(_zText2);
+            this.LightHandlesCanvas.Children.Add(_label2);
+            AddLightControlForHandle(_handle2, 2);
             this.LightHandlesCanvas.Children.Add(_handle3);
             this.LightHandlesCanvas.Children.Add(_zText3);
+            this.LightHandlesCanvas.Children.Add(_label3);
+            AddLightControlForHandle(_handle3, 3);
             this.LightHandlesCanvas.Children.Add(_handle4);
             this.LightHandlesCanvas.Children.Add(_zText4);
+            this.LightHandlesCanvas.Children.Add(_label4);
+            AddLightControlForHandle(_handle4, 4);
             UpdateHandlePositions();
+        }
+
+        private sealed class LightHandleUi
+        {
+            public required Polygon Triangle { get; init; }
+            public required ComboBox Combo { get; init; }
+        }
+
+        private void AddLightControlForHandle(Ellipse handle, int index)
+        {
+            // Create a small triangle indicating direction (points upwards by default)
+            var triangle = new Polygon
+            {
+                Points = new PointCollection(new[] { new Point(0, 10), new Point(6, 22), new Point(-6, 22) }),
+                Fill = Brushes.White,
+                Stroke = Brushes.Black,
+                StrokeThickness = 0.5,
+                Tag = index,
+                IsHitTestVisible = false
+            };
+            Canvas.SetZIndex(triangle, 2);
+            this.LightHandlesCanvas!.Children.Add(triangle);
+
+            // Create a small popup-ish panel for color selection near the handle
+            var combo = new ComboBox
+            {
+                Width = 90,
+                Visibility = Visibility.Collapsed,
+                Tag = index
+            };
+            foreach (var name in new[] { "Red","Orange","Yellow","Lime","Cyan","DeepSkyBlue","Blue","Magenta","Gold","White" })
+                combo.Items.Add(new ComboBoxItem { Content = name });
+            combo.SelectionChanged += (s, e) =>
+            {
+                var cb = (ComboBox)s!;
+                var sel = (cb.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "White";
+                var color = ParseNamedColor(sel);
+                switch (index)
+                {
+                    case 1: if (_draggableLight1 != null) _draggableLight1.Color = color; break;
+                    case 2: if (_draggableLight2 != null) _draggableLight2.Color = color; break;
+                    case 3: if (_draggableLight3 != null) _draggableLight3.Color = color; break;
+                    case 4: if (_draggableLight4 != null) _draggableLight4.Color = color; break;
+                }
+            };
+            this.LightHandlesCanvas.Children.Add(combo);
+
+            // Show/hide on handle click
+            handle.MouseRightButtonUp += (s, e) =>
+            {
+                combo.Visibility = combo.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                e.Handled = true;
+            };
+            handle.ToolTip = "Drag to move; mouse wheel adjusts Z; right-click for color";
+
+            // Store refs via Tag for positioning in PositionHandle
+            handle.Tag = new LightHandleUi { Triangle = triangle, Combo = combo };
         }
         private TextBlock MakeZText()
         {
@@ -241,6 +354,23 @@ namespace PortSphere3D
                 Width = 22,
                 Height = 16,
                 Text = "0.0",
+                IsHitTestVisible = false
+            };
+        }
+
+        private TextBlock MakeGreekLabel(string letter)
+        {
+            return new TextBlock
+            {
+                Foreground = Brushes.Black,
+                FontWeight = FontWeights.Bold,
+                FontSize = 12,
+                Background = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)),
+                Padding = new Thickness(2, 0, 2, 0),
+                TextAlignment = TextAlignment.Center,
+                Width = 18,
+                Height = 16,
+                Text = letter,
                 IsHitTestVisible = false
             };
         }
@@ -264,7 +394,10 @@ namespace PortSphere3D
             {
                 if (_rotation != null)
                 {
-                    _rotation.Angle = (_rotation.Angle + 0.3) % 360.0;
+                    // Use horizontal component of direction to control sign, vertical can be used later for tilt
+                    var sign = Math.Sign(_spinDirVec.X);
+                    double step = sign * _spinSpeedBase;
+                    _rotation.Angle = (_rotation.Angle + step) % 360.0;
                 }
             };
         }
@@ -305,6 +438,27 @@ namespace PortSphere3D
                 // Center the text over the handle
                 Canvas.SetLeft(zText, x - zText.Width / 2);
                 Canvas.SetTop(zText, y - zText.Height / 2);
+            }
+
+            // Position Greek letter slightly below the handle
+            TextBlock? label = null;
+            if (handle == _handle1) label = _label1;
+            else if (handle == _handle2) label = _label2;
+            else if (handle == _handle3) label = _label3;
+            else if (handle == _handle4) label = _label4;
+            if (label != null)
+            {
+                Canvas.SetLeft(label, x - label.Width / 2);
+                Canvas.SetTop(label, y + handle.Height / 2 + 2);
+            }
+
+            // Position triangle and combo (if present via Tag)
+            if (handle.Tag is LightHandleUi ui)
+            {
+                Canvas.SetLeft(ui.Triangle, x);
+                Canvas.SetTop(ui.Triangle, y - handle.Height / 2 - 24);
+                Canvas.SetLeft(ui.Combo, x + handle.Width / 2 + 6);
+                Canvas.SetTop(ui.Combo, y - ui.Combo.ActualHeight / 2);
             }
         }
 
@@ -494,13 +648,82 @@ namespace PortSphere3D
             Setup3DScene();
             SetupLights();
             SetupHandles();
+            ApplyTintAndSetMaterial();
             StartAnimation();
         }
+
+        private void SpinSpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            _spinSpeedBase = e.NewValue;
+        }
+
+    // Dial now uses 11 discrete directions around the circle; we map pointer angle to a unit vector
+    // Slots: 0..10 around 360 degrees
+    private static readonly double[] ElevenAnglesDeg = Enumerable.Range(0, 11).Select(i => i * (360.0 / 11.0)).ToArray();
+
+        private void SphereColorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_sphereMaterial == null) return;
+            ApplyTintAndSetMaterial();
+        }
+
+        private void ApplyTintAndSetMaterial()
+        {
+            if (_sphereMaterial == null || _baseTextureBrush == null) return;
+            var text = (SphereColorComboBox?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Green";
+            var color = text switch
+            {
+                "Blue" => Colors.SteelBlue,
+                "Red" => Colors.IndianRed,
+                "Purple" => Colors.MediumPurple,
+                "Gray" => Colors.Gray,
+                "White" => Colors.WhiteSmoke,
+                _ => Colors.SeaGreen,
+            };
+            // Compose: base pattern + translucent color overlay
+            var overlay = new GeometryDrawing(new SolidColorBrush(color) { Opacity = 0.25 }, null, new RectangleGeometry(new Rect(0, 0, 100, 100)));
+            var group = new DrawingGroup();
+            // Keep the base drawing first so tiling aligns
+            group.Children.Add(_baseTextureBrush.Drawing);
+            group.Children.Add(overlay);
+            var brush = new DrawingBrush(group)
+            {
+                TileMode = _baseTextureBrush.TileMode,
+                Viewport = _baseTextureBrush.Viewport,
+                ViewportUnits = _baseTextureBrush.ViewportUnits,
+                Viewbox = _baseTextureBrush.Viewbox,
+                ViewboxUnits = _baseTextureBrush.ViewboxUnits
+            };
+            _sphereMaterial.Brush = brush;
+        }
+
+        private static Color ParseNamedColor(string name)
+        {
+            // Map a handful of known names to Colors; default to White
+            return name switch
+            {
+                "Red" => Colors.Red,
+                "Orange" => Colors.Orange,
+                "Yellow" => Colors.Yellow,
+                "Lime" => Colors.Lime,
+                "Cyan" => Colors.Cyan,
+                "DeepSkyBlue" => Colors.DeepSkyBlue,
+                "Blue" => Colors.Blue,
+                "Magenta" => Colors.Magenta,
+                "Gold" => Colors.Gold,
+                "White" => Colors.White,
+                _ => Colors.White
+            };
+        }
+
+    // Removed old top-level light color combo handlers; per-handle combos are used instead.
 
         private void LightHandlesCanvas_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateHandlePositions();
         private void LightHandlesCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var pos = e.GetPosition(this.LightHandlesCanvas!);
+            // start dragging dial if clicked
+            if (IsOverSpinDial(pos)) { _dialDragging = true; this.LightHandlesCanvas!.CaptureMouse(); return; }
             if (_handle1 != null && _handle1.IsMouseOver) { _dragging1 = true; _lastMousePos = pos; this.LightHandlesCanvas!.CaptureMouse(); }
             else if (_handle2 != null && _handle2.IsMouseOver) { _dragging2 = true; _lastMousePos = pos; this.LightHandlesCanvas!.CaptureMouse(); }
             else if (_handle3 != null && _handle3.IsMouseOver) { _dragging3 = true; _lastMousePos = pos; this.LightHandlesCanvas!.CaptureMouse(); }
@@ -509,10 +732,17 @@ namespace PortSphere3D
         private void LightHandlesCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             _dragging1 = _dragging2 = _dragging3 = _dragging4 = false;
+            _dialDragging = false;
             this.LightHandlesCanvas!.ReleaseMouseCapture();
         }
-        private void LightHandlesCanvas_MouseMove(object sender, MouseEventArgs e)
+    private void LightHandlesCanvas_MouseMove(object sender, MouseEventArgs e)
         {
+            if (_dialDragging)
+            {
+        var dialPos = e.GetPosition(this.LightHandlesCanvas!);
+        UpdateSpinDialFromCanvasPos(dialPos);
+                return;
+            }
             if (!_dragging1 && !_dragging2 && !_dragging3 && !_dragging4) return;
             var pos = e.GetPosition(this.LightHandlesCanvas!);
             if (_dragging1 && _draggableLight1 != null && _handle1 != null)
@@ -594,6 +824,78 @@ namespace PortSphere3D
                 Canvas.SetLeft(_zInstruction, 0);
                 Canvas.SetTop(_zInstruction, 2);
             }
+        }
+
+        private bool IsOverSpinDial(Point canvasPos)
+        {
+            // Project spin dial's center relative to the LightHandlesCanvas (approximate using top toolbar height ~60)
+            // Since dial is in toolbar, not canvas, we only allow dragging via the dial itself; here we return false.
+            return false;
+        }
+
+        private void UpdateSpinDialFromCanvasPos(Point canvasPos)
+        {
+            // No-op because we’re not mapping dial drag on canvas; dial itself handles drag in toolbar events.
+        }
+
+        private void SpinDial_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var p = e.GetPosition((IInputElement)sender);
+            UpdateSpinDirectionFromDialPoint(p);
+            ((UIElement)sender).CaptureMouse();
+        }
+        private void SpinDial_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            var p = e.GetPosition((IInputElement)sender);
+            UpdateSpinDirectionFromDialPoint(p);
+        }
+        private void SpinDial_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            ((UIElement)sender).ReleaseMouseCapture();
+        }
+
+        private RotateTransform? GetSpinDialRotate()
+        {
+            if (this.FindName("SpinDialPointer") is Polygon poly && poly.RenderTransform is RotateTransform rt)
+            {
+                return rt;
+            }
+            return null;
+        }
+
+        private void UpdateSpinDirectionFromDialPoint(Point p)
+        {
+            // Compute angle relative to dial center (32,32)
+            var dx = p.X - 32; var dy = 32 - p.Y; // y-up
+            var angDeg = Math.Atan2(dy, dx) * 180 / Math.PI; // -180..180
+            var r = GetSpinDialRotate();
+            // Point towards snapped direction
+            double snapped = SnapAngleTo11(angDeg);
+            if (r != null)
+            {
+                r.Angle = 90 - snapped; // convert to UI orientation (0 at right)
+            }
+            var rad = snapped * Math.PI / 180.0;
+            _spinDirVec = new Vector2D(Math.Cos(rad), Math.Sin(rad));
+        }
+
+        private static double SnapAngleTo11(double deg)
+        {
+            // Normalize to 0..360
+            double a = (deg % 360 + 360) % 360;
+            // Find nearest slot
+            double slotSize = 360.0 / 11.0;
+            int slot = (int)Math.Round(a / slotSize);
+            if (slot == 11) slot = 0;
+            return slot * slotSize;
+        }
+
+        private readonly struct Vector2D
+        {
+            public readonly double X;
+            public readonly double Y;
+            public Vector2D(double x, double y) { X = x; Y = y; }
         }
         // ...existing code for MainWindow class (3D setup, MCP HTTP server, etc.)...
     }
