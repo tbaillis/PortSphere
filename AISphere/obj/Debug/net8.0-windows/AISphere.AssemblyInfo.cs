@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AISphere")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d3e0e34ff3a297090ceeaf3d3ef990263f5d789d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c5ae7b4a23d7f0c932936535b9b853ab5b343567")]
 [assembly: System.Reflection.AssemblyProductAttribute("AISphere")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AISphere")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
